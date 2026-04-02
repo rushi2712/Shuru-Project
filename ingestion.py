@@ -159,10 +159,10 @@ fifa_trans = fifa_trans.withColumn("age_group",
 fifa_trans.orderBy(desc(col("player_id"))).show(10)
 
 #TASK 4: Saving/writing the transformed data into the processed folder in the parquet format
-print(r"Writing the processed data to D:\Big_Data_Engineering\Interviews\Shuru Coding Round\processed_parquet")
+print(r"Writing the processed data to D:\Big_Data_Engineering\Interviews\Shuru Coding Round\processed_parquet...")
 
 output_path = "D:\\Big_Data_Engineering\\Interviews\\Shuru Coding Round\\processed_parquet"
-print(os.path.exists("D:\\Big_Data_Engineering\\Interviews\\Shuru Coding Round"))
+print("To check whether the path exists. If True, cool.: ", os.path.exists("D:\\Big_Data_Engineering\\Interviews\\Shuru Coding Round"))
 fifa_trans.write.mode("overwrite").partitionBy("team", "age_group").parquet(output_path)
 print("Data stored as Parquet successfully!")
 #Note: While writing into the parquet, I faced the error. The error is due to the partitionBy "team".
