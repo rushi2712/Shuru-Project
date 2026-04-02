@@ -55,115 +55,30 @@ os.environ["PATH"] += os.pathsep + r"C:\hadoop\bin"
 #os.environ['PYSPARK_SUBMIT_ARGS'] = '--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.4 pyspark-shell'
 
 conf = SparkConf().setAppName("pyspark").setMaster("local[*]").set("spark.driver.host","localhost").set("spark.default.parallelism", "1")
-sc = SparkContext(conf=conf)
+#sc = SparkContext(conf=conf)
 
-spark = SparkSession.builder.appName("FIFA Pipeline").getOrCreate()
+#spark = SparkSession.builder.appName("FIFA Pipeline").getOrCreate()
 # 🔥 Important setting
-spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
+#spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 #Enabling dynamic partition overwrite using Spark config. So, only affected partitions are updated instead of rewriting the entire dataset.
 #THis will be useful while REWRITING(re-saving) by partitions after transformations. Without this, whenever we re-write the entire transformations,
 #the partitioned folders will be created again and again at the destination path, thus results in more cost, concurrent issues, and any other risks while dealing with huge data
 #=============================================================#
 #Write code from below
-print("\n-------------")
-print("Shuru Project")
-print("-------------")
+print("\n-------------------------")
+print("Shuru Project - ingestion")
+print("-------------------------")
 
 #######################
 #TASK 1: DATA INGESTION - Reading the CSV file - FIFA-21 Complete
-print("\nThe FIFA dataset is:")
+#print("\nThe FIFA dataset is:")
 #fifa = spark.read.format("csv").option("header", "true").option("inferSchema", "true").option("sep", ";").load(r"D:\FIFA-21 Complete.csv")
 #OR
-fifa = spark.read.csv(r"D:\Big_Data_Engineering\Interviews\Shuru Coding Round\raw\FIFA-21 Complete.csv", header=True, inferSchema=True, sep=";")
-fifa.show(10)
-fifa.printSchema()
-
-######################
-#TASK 2: DATA CLEANING
-#The first and the foremost check is to find the empty cells manually in the Raw CSV file, by applying the filters.
-#Next, if you are not clear with the manual check, with PySpark, we can find the count of empty cells. But this consumes time.
-
-#Let's find the count of blank rows in player_id column
-'''
-fifa = fifa.select([count(when(
-                            col("player_id").isNull(), "player_id")).alias("player_id")
-])
-print("The blank values count is: ")
-fifa.show()'''
-
-#Even though we know that there are no NULL values or empty strings "" or fake nulls (NA, null) in the Raw CSV file,
-#1. Replace the NULL, "", Fake nulls with None
-#2. Let's trim the cells as there might be empty spaces in the strings ("Rushi" != "Rushi "), ("   Rushi    PT ")
-#3. dropDuplicates the records in the table
-#4. Standardization
-#These are sufficient
-
-#1. Replace the NULL, "", Fake nulls with None
-#Also, replace the special characters with "" for specific column(s)
-fifa_clean = fifa.replace(["Null", "na", "null", ""], None)
-print("After replacing the null values with None:")
-fifa_clean.show(5)
-
-#2. Trimming extra spaces
-#Actually, we are doing a Pro level trimming, below. It looks complex. But once understood, it feels understandable.
-#While trimming, we trim only the String type. So, when we come across any int datatype or date datatype columns, we avoid trimming them.
-fifa_clean = fifa_clean.select([
-    trim(regexp_replace(col(c), " +", " ")).alias(c)    #3.1. (regexp_replace(col(c)), " +", " ") replaces multiple spaces with single space. 3.2 Then trim removes spaces at front and back.
-    if isinstance(fifa_clean.schema[c].dataType, StringType) else col(c)  #2. Meaning: Is this column a String? If not, at avoids that column
-    for c in fifa.columns   #1. This for loop goes through all the table columns
-]).withColumn("team", trim(regexp_replace(col("team"), r"[\\/:*?\"'<1.>|]", ""))) #Here, we are specifically cleaning the "team" column as it contains special characters.
-
-print("After Trimming the extra spaces and cleaning the special characters in team column, the DF is")
-fifa_clean.show(5)
-fifa_clean.printSchema()
-
-#3. dropDuplicates the records in the table
-fifa_clean = fifa_clean.dropDuplicates()
-print("After dropping the duplicate records, the dataframe is")
-fifa_clean.show(5)
-#To verify the count after dropping duplicates, before dropping duplicates(17981)
-fifa_count_after_dd = fifa_clean.select([count(when(
-    col("player_id").isNotNull(), "player_id")).alias("player_id")
-])
-print("The count after dropping duplicates: ")
-fifa_count_after_dd.show()
-
-#4. Standardization i.e. converting the Title case, upper case, and all other mixed cases to lower.
-cols_to_lower = ["name", "nationality", "team"]
-fifa_clean = fifa_clean.select([
-    lower(col(c)).alias(c) if c in cols_to_lower else col(c)
-    for c in fifa_clean.columns
-]).orderBy(asc("player_id"))
-print("Converting the name, nationality and team values to lower case")
-fifa_clean.show(5)
-
-#############################
-#TASK 3: DATA TRANSFORMATIONS
-#Transformation 1:Add a new column: growth_potential = (potential - overall)
-#If growth_potential is negative, replace it with 0
-fifa_trans = fifa_clean.withColumn("growth_potential",
-                                 when(col("potential") - col("overall") > 0, col("potential") - col("overall"))
-                                 .otherwise(0)
-)
-print("The Growth Potential (potential - overall) is:")
-fifa_trans.orderBy(col("name")).show(10)
-
-#Transformation 2: Add a new column age_group with brackets - <20, 20–25, 26–30, >30
-print("The age brackets based on 'age' are: ")
-fifa_trans = fifa_trans.withColumn("age_group",
-                                 when(col("age") < 20, "<20")
-                                 .when((col("age") >= 20) & (col("age") <= 25), "20-25")
-                                 .when((col("age") >= 26) & (col("age") <= 30), "26-30")
-                                 .otherwise(">30")
-)
-fifa_trans.orderBy(desc(col("player_id"))).show(10)
-
-#TASK 4: Saving/writing the transformed data into the processed folder in the parquet format
-print(r"Writing the processed data to D:\Big_Data_Engineering\Interviews\Shuru Coding Round\processed_parquet...")
-
-output_path = "D:\\Big_Data_Engineering\\Interviews\\Shuru Coding Round\\processed_parquet"
-print("To check whether the path exists. If True, cool.: ", os.path.exists("D:\\Big_Data_Engineering\\Interviews\\Shuru Coding Round"))
-fifa_trans.write.mode("overwrite").partitionBy("team", "age_group").parquet(output_path)
-print("Data stored as Parquet successfully!")
-#Note: While writing into the parquet, I faced the error. The error is due to the partitionBy "team".
-# In the dataset, the "team" column contains special and unnecessary characters. We need to clean them properly using "regexp_replace"
+def read_data():
+    spark = SparkSession.builder.appName("FIFA Pipeline").getOrCreate()
+    spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
+    print("\nThe FIFA dataset is:")
+    fifa_read = spark.read.csv(r"D:\Big_Data_Engineering\Interviews\Shuru Coding Round\raw\FIFA-21 Complete.csv", header=True, inferSchema=True, sep=";")
+    fifa_read.show(10)
+    fifa_read.printSchema()
+    return fifa_read, spark
