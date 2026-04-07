@@ -44,7 +44,7 @@ python_path = sys.executable
 os.environ['PYSPARK_PYTHON'] = python_path
 os.environ["HADOOP_HOME"] = r"C:\hadoop"
 #os.environ['HADOOP_HOME'] = hadoop_home
-os.environ['JAVA_HOME'] = r'C:\Users\ptrus\.jdks\corretto-1.8.0_472'        #  <----- 🔴JAVA PATH🔴
+os.environ['JAVA_HOME'] = r'C:\Users\1767\.jdks\corretto-1.8.0_462'        #  <----- 🔴JAVA PATH🔴
 # Set HADOOP_HOME to the folder ABOVE the bin folder
 # Add the bin folder to your System Path
 os.environ["PATH"] += os.pathsep + r"C:\hadoop\bin"
@@ -74,11 +74,11 @@ print("-------------------------")
 #print("\nThe FIFA dataset is:")
 #fifa = spark.read.format("csv").option("header", "true").option("inferSchema", "true").option("sep", ";").load(r"D:\FIFA-21 Complete.csv")
 #OR
-def read_data():
+def read_player_data():
     spark = SparkSession.builder.appName("FIFA Pipeline").getOrCreate()
-    spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
+    spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic") #Check why is this line at 62-65 lines.
     print("\nThe FIFA dataset is:")
-    fifa_read = spark.read.csv(r"D:\Big_Data_Engineering\Interviews\Shuru Coding Round\raw\FIFA-21 Complete.csv", header=True, inferSchema=True, sep=";")
-    fifa_read.show(10)
+    fifa_read = spark.read.csv(r"D:\Users\1767\Desktop\Cloud Data Engineering\Projects\Shuru_project\Raw\FIFA-21 Complete.csv", header=True, inferSchema=True, sep=";")
+    fifa_read.show(6)
     fifa_read.printSchema()
     return fifa_read, spark
