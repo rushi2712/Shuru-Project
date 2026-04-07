@@ -35,12 +35,13 @@ def fifa_clean(fifa_read):
     #2. Trimming extra spaces
     #Actually, we are doing a Pro level trimming, below. It looks complex. But once understood, it feels understandable.
     #While trimming, we trim only the String type. So, when we come across any int datatype or date datatype columns, we avoid trimming them.
-    fifa_cleaned = fifa_cleaned.select([
+    fifa_cleaned = (fifa_cleaned.select([
         trim(regexp_replace(col(c), " +", " ")).alias(c)    #3.1. (regexp_replace(col(c)), " +", " ") replaces multiple spaces with single space. 3.2 Then trim removes spaces at front and back.
         if isinstance(fifa_cleaned.schema[c].dataType, StringType) else col(c)  #2. Meaning: Is this column a String? If not, at avoids that column
         for c in fifa_cleaned.columns   #1. This for loop goes through all the table columns
-    ]).withColumn("team", trim(regexp_replace(col("team"), r"[\\/:*?\"'<1.>|]", ""))) #4. Here, we are specifically cleaning the "team" column as it contains special characters.
-    print("After Trimming the extra spaces and cleaning the special characters in team column, the DF is")
+    ]).withColumn("team", trim(regexp_replace(col("team"), r"[\\/:*?\"'<1.>|]", "")))
+      .withColumn("name", trim(regexp_replace(col("name"), r"[\\/:*?\"'<1.>|]", "")))) #4. Here, we are specifically cleaning the "team" column as it contains special characters.
+    print("After Trimming the extra spaces and cleaning the special characters in team, and name columns, the DF is")
     fifa_cleaned.show(5)
     fifa_cleaned.printSchema()
 
