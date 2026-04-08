@@ -18,7 +18,8 @@ def store_query_output(df, folder_name):
     base_path = "D:\\Users\\1767\\Desktop\\Cloud Data Engineering\\Projects\\Shuru_project\\queries_parquet"
     output_path_2 = f"{base_path}\\{folder_name}"
 
-    print(r"\nWriting the query output to D:\Users\...\queries_parquet")
+    print("\n")
+    print(r"Writing the query output to D:\Users\...\queries_parquet")
     df.write.mode("overwrite").parquet(output_path_2)
     print("Query Data stored as Parquet successfully!")
 
